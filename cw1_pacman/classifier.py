@@ -22,14 +22,15 @@ class Classifier:
     # Trains on training dataset, the arrays of input <data>, on target, or 
     # output singular integer <target>.
     #
-    # <data> = [001011101010...]
+    # <data> = [[001011101010...], [001011101010...], ...]
     # <target> = 0 or 1 or 2 or 3
     #
     # This happens before classifier is run on the environment.
     def fit(self, data, target):
-        self.model = MLP(len(data), len(data) + 5, 4)
-        prediction = self.model.forward(data)
-        print(prediction)
+        input_size = len(data[0])
+        self.model = MLP(input_size, input_size + 5, 4)
+        prediction = self.model.forward(data[0])
+        
         pass
 
     # We simply output the integer output/prediction given a singular feature
@@ -39,9 +40,10 @@ class Classifier:
     # ClassifierAgent.py handles output conversion of the number to these 
     # strings taken by the environment. So we may not even use legal at all.
     def predict(self, data, legal=None):
-        
+        prediction = self.model.forward(data)
+        print(prediction)
         # Currently only outputs 1 (pretty sure that means East). 
-        return 1
+        return prediction
         
 # Multilayer Perception Class
 # Will have singular of both forward and backward passes.
@@ -77,7 +79,7 @@ class MLP:
     # hidden node j. Includes activation function use.
     def forward_input_j(self, input, j):
         temp = self.w_j_i[j][0] # w_j_0
-        for i, x in enumerate(input[0]):
+        for i, x in enumerate(input):
             temp += x * self.w_j_i[j][i + 1]
         return self.activation_ReLu(temp)
 
@@ -89,7 +91,7 @@ class MLP:
             temp += y_j * self.w_k_j[k][j + 1]
         return self.activation_Signmoid(temp)
 
-    def forward(self, input):
+    def forward(self, input, train = False):
         # z_k = act_func( w_k_0 + sum_over_hidden_nodes( w_k_j * act_func( w_j_0 + sum_over_inputs( w_j_i * x_i ))))
        
         y = np.zeros(self.hidden_size)
@@ -106,16 +108,6 @@ class MLP:
         # Can change to perform a random selection, or any other acceptable 
         # method.
         return np.argmax(z)
-
         
-
-            
-        
-            
-        
-            
-            
-        
-        return 1
     
     
