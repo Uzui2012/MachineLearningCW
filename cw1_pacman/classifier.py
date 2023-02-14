@@ -30,7 +30,6 @@ class Classifier:
         inputSize = len(data[0])
         self.model = MLP(inputSize, inputSize + 5, 4)
         prediction = self.model.forward(data[0])
-        
         pass
 
     # We simply output the integer output/prediction given a singular feature
@@ -109,8 +108,6 @@ class MLP:
         # Return index of the maximum probability selection.
         # Can change to perform a random selection, or any other acceptable 
         # method.
-        print(z)
-        print(y)
         return np.argmax(z)
         
     
