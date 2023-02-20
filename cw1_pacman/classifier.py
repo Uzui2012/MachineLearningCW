@@ -4,6 +4,7 @@
 # Use the skeleton below for the classifier and insert your code here.
 from sklearn.neighbors import KNeighborsClassifier
 import numpy as np
+import time
 
 class Classifier:
     # Classifier is initialised with nothing passed through. Only initialise 
@@ -23,15 +24,17 @@ class Classifier:
     # output singular integer <target>.
     #
     # <data> = [[001011101010...], [001011101010...], ...]
-    # <target> = 0 or 1 or 2 or 3
+    # <target> = array of (0 or 1 or 2 or 3)'s
     #
     # This happens before classifier is run on the environment.
     def fit(self, data, target):
         inputSize = len(data[0])
         self.model = MLP(inputSize, inputSize + 5, 4)
-        self.model.backward(theta = this.THETA, 
-                            learningRate = self.LEARNING_RATE, 
-                            input = data, 
+        for i in range(len(data)):
+            prediction = self.model.forward(data[i], train = True)
+
+        self.model.backward(theta = self.THETA, 
+                            learningRate = self.LEARNING_RATE,  
                             targets = target)
         pass
 
@@ -44,7 +47,7 @@ class Classifier:
     # our selected move is illegal anyway. So we may not even use legal at all.
     
     def predict(self, data, legal=None):
-        prediction = self.model.forward(data)
+        prediction = self.model.forward(data, train = False)
         print(prediction)
         # Currently only outputs 1 (pretty sure that means East). 
         return prediction
@@ -70,14 +73,16 @@ class MLP:
         self.weightsKJ = np.random.uniform(low = -1, high = 1,
                                        size = (self.outputSize, 
                                                self.hiddenSize + 1))
+    
+        self.batch = []
 
     # ReLu activation function
-    def activationReLu(x):
+    def activationReLu(self, x):
         return max(0.0, x)
 
     # Derivative of ReLu 
     # (Note, we return 0 when x is 0 despite d/dx being undefined at x = 0)
-    def derivativeReLu(x):
+    def derivativeReLu(self, x):
         if x > 0:
             return 1
         else:
@@ -105,28 +110,28 @@ class MLP:
         temp = self.weightsKJ[k][0] # w_k_0
         for j, y_j in enumerate(y):
             temp += y_j * self.weightsKJ[k][j + 1]
-        return self.activationSymSig(temp)
+        return self.activationSig(temp)
 
     def forward(self, input, train = False):
         # z_k = act_func( w_k_0 + 
         #       sum_over_hidden_nodes( 
         #           weightsKJ * act_func( w_j_0 + 
         #           sum_over_inputs(weightsJI * x_i ))))
-
+        
         y = np.zeros(self.hiddenSize)
         # Calculate all outputs of hidden nodes, y
         for j, y_j in enumerate(y):
             y[j] = self.sumInputOnWeights(input, j)
 
-        self.y = y
         z = np.zeros(self.outputSize)
         # Calculate all outputs of output nodes, z
         for k, z_k in enumerate(z):
             z_k = self.sumHiddenOnWeights(y, k)
-        self.z = z
         # Return index of the maximum probability selection.
         # Can change to perform a random selection, or any other acceptable 
         # method.
+        if train:
+            self.batch.append((y, z))
         return np.argmax(z)
         
     def crossEntropyLossBatch(predictions, targets, epsilon):
@@ -138,9 +143,26 @@ class MLP:
     def meanSqLoss(self, pred, target):
         return np.sum(np.square(pred-target)) / (2 * self.inputSize)
 
-    def backward(self, theta, learningRate, target):
-        error = argmax(self.z) - target
-        dWKJ = error * self.derivativeSig(argmax(self.z))
+    def backward(self, theta, learningRate, targets):
+        for batchIdx, batchParts in enumerate(self.batch):
+            error = np.argmax(batchParts[1]) - targets[batchIdx]
+            dk = error * self.derivativeSig(np.argmax(batchParts[1]))
+            temp = 0
+            print(self.weightsKJ)
+            time.sleep(10)
+            for i in range(4):
+                temp += dk*self.weightsKJ[i]
+            dj = 0
+            for y_i in batchParts[0]:
+                dj += temp * self.derivativeReLu(y_i)
+
+            #print(dk)
+            print(dj)
+            
+
+
+
+
 
 
     
