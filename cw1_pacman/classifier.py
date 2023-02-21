@@ -2,7 +2,7 @@
 # Lin Li/26-dec-2021
 #
 # Use the skeleton below for the classifier and insert your code here.
-from sklearn.neighbors import KNeighborsClassifier
+import matplotlib.pyplot as plt
 import numpy as np
 import time
 
@@ -11,8 +11,6 @@ class Classifier:
     # object scope constants and variables here. We may not even use this.
     def __init__(self):
         self.LEARNING_RATE = 0.01
-        self.THETA = 0.8
-        pass
 
     # As far as I can see, we don't have to perform any retraining on the model
     # between sets of games, unless we know the environment changes (I believe
@@ -28,15 +26,34 @@ class Classifier:
     #
     # This happens before classifier is run on the environment.
     def fit(self, data, target):
+        lossesMSE = []
+        lossesCE = []
         inputSize = len(data[0])
-        self.model = MLP(inputSize, inputSize + 5, 4)
-        for i in range(len(data)):
-            prediction = self.model.forward(data[i], train = True)
+        self.model = MLP(inputSize, 8, 4)
+        predictions = []
+        targets = []
+        for i in range(len(target)):
+            targets.append(self.model.oneHotEncode(target[i]))
+        
+        for epoch in range(250):            
+            for i in range(len(data)):
+                prediction = self.model.forward(data[i], train = True)
+                predictions.append(self.model.oneHotEncode(prediction))
 
-        self.model.backward(theta = self.THETA, 
-                            learningRate = self.LEARNING_RATE,  
-                            targets = target)
-        pass
+            self.model.backward(learningRate = self.LEARNING_RATE,  
+                                targets = target)
+
+            lossMSE = self.model.meanSqLoss(predictions, targets)
+            lossesMSE.append(lossMSE)
+            lossCE = self.model.crossEntropyLossBatch(predictions, targets, 0.001)
+            lossesCE.append(lossCE)
+            print(f"lossCE: {lossCE}, lossMSE: {lossMSE}, weightKJ[2][2]: {self.model.weightsKJ[2][2]}")
+            predictions = []
+        
+        plt.plot(lossesMSE)
+        plt.show()
+        plt.plot(lossesCE)
+        plt.show()
 
     # We simply output the integer output/prediction given a singular feature
     # array. Current legal moves are given as array of string 'North', 'East',
@@ -48,8 +65,6 @@ class Classifier:
     
     def predict(self, data, legal=None):
         prediction = self.model.forward(data, train = False)
-        print(prediction)
-        # Currently only outputs 1 (pretty sure that means East). 
         return prediction
         
 # Multilayer Perception Class
@@ -63,14 +78,14 @@ class MLP:
         # Input i, output node j.
         # Note: input and hidden sizes are FLIPPED for easier notation during
         # calculation later on.
-        self.weightsJI = np.random.uniform(low = -1, high = 1,
+        self.weightsJI = np.random.uniform(low = -2, high = 2,
                                        size = (self.hiddenSize, 
                                                self.inputSize + 1))
         
         # Input node j, output k
         # Note: hidden and output sizes are FLIPPED for easier notation during
         # calculation later on.
-        self.weightsKJ = np.random.uniform(low = -1, high = 1,
+        self.weightsKJ = np.random.uniform(low = -2, high = 2,
                                        size = (self.outputSize, 
                                                self.hiddenSize + 1))
     
@@ -81,12 +96,12 @@ class MLP:
         return max(0.0, x)
 
     # Derivative of ReLu 
-    # (Note, we return 0 when x is 0 despite d/dx being undefined at x = 0)
+    # (Note: we return 0 when x is 0, despite d/dx being undefined at x = 0)
     def derivativeReLu(self, x):
-        if x > 0:
-            return 1
-        else:
-            return 0
+        result = np.zeros(len(x))
+        for idx, x in enumerate(x):
+            result[idx] = x > 0
+        return result
 
     # Sigmoid activation function
     def activationSig(self, x):
@@ -112,6 +127,10 @@ class MLP:
             temp += y_j * self.weightsKJ[k][j + 1]
         return self.activationSig(temp)
 
+    # Forward propagation function. Calculates the predicted output
+    # from the 3 layer shallow neural network classifier. Has two modes of 
+    # training and not training. During training batches are saved to the model 
+    # for the backpropagation algorithm that learns.
     def forward(self, input, train = False):
         # z_k = act_func( w_k_0 + 
         #       sum_over_hidden_nodes( 
@@ -126,38 +145,72 @@ class MLP:
         z = np.zeros(self.outputSize)
         # Calculate all outputs of output nodes, z
         for k, z_k in enumerate(z):
-            z_k = self.sumHiddenOnWeights(y, k)
+            z[k] = self.sumHiddenOnWeights(y, k)
+        
+
+        # Training mode batch handling (we have 125 samples)
+        if train:
+            self.batch.append((input, y, z))
+            if len(self.batch) > 125:
+                self.batch.pop(0)
+        
         # Return index of the maximum probability selection.
         # Can change to perform a random selection, or any other acceptable 
         # method.
-        if train:
-            self.batch.append((y, z))
         return np.argmax(z)
-        
-    def crossEntropyLossBatch(predictions, targets, epsilon):
-        preds = np.clip(predictions, epsilon, 1. - eplsion)
+
+    # Cross Entropy Loss function used for evaluating model. 
+    def crossEntropyLossBatch(self, predictions, targets, epsilon):
+        preds = np.clip(predictions, epsilon, 1. - epsilon)
         N = preds.shape[0]
         loss = -np.sum(targets * np.log(preds + 0.000000001)) / N
         return loss
 
     def meanSqLoss(self, pred, target):
-        return np.sum(np.square(pred-target)) / (2 * self.inputSize)
 
-    def backward(self, theta, learningRate, targets):
+        return np.sum(np.square(np.array(pred)-np.array(target))) / (2 * self.inputSize)
+
+    # Function to parse any singular target into one hot encoding form
+    def oneHotEncode(self, target):
+        if target == 0:
+            return np.array([1.0, .0, .0, .0])
+        elif target == 1:
+            return np.array([0.0, 1.0, 0.0, 0.0])
+        elif target == 2:
+            return np.array([0.0, 0.0, 1.0, 0.0])
+        elif target == 3:
+            return np.array([0.0, 0.0, 0.0, 1.0])
+
+    def backward(self, learningRate, targets):
+        weightUpdateKJ = np.zeros(self.weightsKJ.shape)
+        weightUpdateJI = np.zeros(self.weightsJI.shape)
+        
         for batchIdx, batchParts in enumerate(self.batch):
-            error = np.argmax(batchParts[1]) - targets[batchIdx]
-            dk = error * self.derivativeSig(np.argmax(batchParts[1]))
-            temp = 0
-            print(self.weightsKJ)
-            time.sleep(10)
-            for i in range(4):
-                temp += dk*self.weightsKJ[i]
-            dj = 0
-            for y_i in batchParts[0]:
-                dj += temp * self.derivativeReLu(y_i)
+            error = batchParts[2] - self.oneHotEncode(targets[batchIdx])
+            dk = error * self.derivativeSig(batchParts[2])
 
-            #print(dk)
-            print(dj)
+            temp = np.dot(dk, self.weightsKJ)
+            y_j = np.insert(batchParts[1], 0, 1.0)
+            dj = temp * self.derivativeReLu(y_j)
+
+
+            for k in range(weightUpdateKJ.shape[0]):
+                for j in range(weightUpdateKJ.shape[1]):
+                    weightUpdateKJ[k][j] += learningRate * dk[k] * y_j[j]
+
+            x = np.insert(batchParts[0], 0, 1.0)
+            for j in range(weightUpdateJI.shape[0]):
+                for i in range(weightUpdateJI.shape[1]):
+                    weightUpdateJI[j][i] += learningRate * dj[j] * x[i]
+
+        self.weightsKJ = self.weightsKJ - weightUpdateKJ
+        self.weightsJI = self.weightsJI - weightUpdateJI
+
+
+            
+        
+
+
             
 
 
