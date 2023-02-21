@@ -166,8 +166,8 @@ class MLP:
         loss = -np.sum(targets * np.log(preds + 0.000000001)) / N
         return loss
 
+    # Mean Squared Loss function used for evaluating model.
     def meanSqLoss(self, pred, target):
-
         return np.sum(np.square(np.array(pred)-np.array(target))) / (2 * self.inputSize)
 
     # Function to parse any singular target into one hot encoding form
@@ -181,6 +181,10 @@ class MLP:
         elif target == 3:
             return np.array([0.0, 0.0, 0.0, 1.0])
 
+    # Backpropagation Algorithm implementation.
+    # Following the widely available resources as well as lectures in other 
+    # modules, recreated the backpropagation algorithm using batch gradient 
+    # descent.
     def backward(self, learningRate, targets):
         weightUpdateKJ = np.zeros(self.weightsKJ.shape)
         weightUpdateJI = np.zeros(self.weightsJI.shape)
@@ -192,7 +196,6 @@ class MLP:
             temp = np.dot(dk, self.weightsKJ)
             y_j = np.insert(batchParts[1], 0, 1.0)
             dj = temp * self.derivativeReLu(y_j)
-
 
             for k in range(weightUpdateKJ.shape[0]):
                 for j in range(weightUpdateKJ.shape[1]):
