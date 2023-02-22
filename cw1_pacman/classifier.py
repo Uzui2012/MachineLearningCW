@@ -8,13 +8,13 @@ import time
 
 class Classifier:
     # Classifier is initialised with nothing passed through. Only initialise 
-    # object scope constants and variables here. We may not even use this.
+    # object scope constants and variables here. 
     def __init__(self):
         self.LEARNING_RATE = 0.01
 
     # As far as I can see, we don't have to perform any retraining on the model
     # between sets of games, unless we know the environment changes (I believe
-    # it doesn't). Again we may not even use this.
+    # it doesn't). 
     def reset(self):
         pass
     
@@ -29,13 +29,16 @@ class Classifier:
         lossesMSE = []
         lossesCE = []
         inputSize = len(data[0])
-        self.model = MLP(inputSize, 8, 4)
+        self.model = MLP(inputSize, inputSize//2, 4)
         predictions = []
         targets = []
         for i in range(len(target)):
             targets.append(self.model.oneHotEncode(target[i]))
         
-        for epoch in range(250):            
+        # Training loop, iterates for a fixed 1000 epochs rather than 
+        # waiting for loss to reach some criterion due to the variance in random
+        # initial performance
+        for epoch in range(1000):            
             for i in range(len(data)):
                 prediction = self.model.forward(data[i], train = True)
                 predictions.append(self.model.oneHotEncode(prediction))
@@ -47,12 +50,15 @@ class Classifier:
             lossesMSE.append(lossMSE)
             lossCE = self.model.crossEntropyLossBatch(predictions, targets, 0.001)
             lossesCE.append(lossCE)
-            print(f"lossCE: {lossCE}, lossMSE: {lossMSE}, weightKJ[2][2]: {self.model.weightsKJ[2][2]}")
+            if epoch % 50 == 0:
+                print(f"lossCE: {lossCE}, lossMSE: {lossMSE}")
             predictions = []
         
-        plt.plot(lossesMSE)
-        plt.show()
-        plt.plot(lossesCE)
+        # Loss graph plots
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+        fig.suptitle('Loss')
+        ax1.plot(lossesMSE)
+        ax2.plot(lossesCE)
         plt.show()
 
     # We simply output the integer output/prediction given a singular feature
@@ -78,14 +84,14 @@ class MLP:
         # Input i, output node j.
         # Note: input and hidden sizes are FLIPPED for easier notation during
         # calculation later on.
-        self.weightsJI = np.random.uniform(low = -2, high = 2,
+        self.weightsJI = np.random.uniform(low = -1, high = 1,
                                        size = (self.hiddenSize, 
                                                self.inputSize + 1))
         
         # Input node j, output k
         # Note: hidden and output sizes are FLIPPED for easier notation during
         # calculation later on.
-        self.weightsKJ = np.random.uniform(low = -2, high = 2,
+        self.weightsKJ = np.random.uniform(low = -1, high = 1,
                                        size = (self.outputSize, 
                                                self.hiddenSize + 1))
     
