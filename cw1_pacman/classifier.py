@@ -2,15 +2,20 @@
 # Lin Li/26-dec-2021
 #
 # Use the skeleton below for the classifier and insert your code here.
-import matplotlib.pyplot as plt
 import numpy as np
-import time
 
 class Classifier:
     # Classifier is initialised with nothing passed through. Only initialise 
     # object scope constants and variables here. 
+    # 
+    # Learning rate and number of hidden nodes affect the performance of the
+    # classifier the most. Found that for the training set 'good-moves.txt' it
+    # is best with 0.01 learning rate and to have less hidden nodes than the 
+    # number of inputs. This may be different for different sized training sets,
+    # feel free to change these two hyperparameters. 
     def __init__(self):
         self.LEARNING_RATE = 0.01
+        self.HIDDEN_SIZE = 10
 
     # As far as I can see, we don't have to perform any retraining on the model
     # between sets of games, unless we know the environment changes (I believe
@@ -25,11 +30,14 @@ class Classifier:
     # <target> = array of (0 or 1 or 2 or 3)'s
     #
     # This happens before classifier is run on the environment.
+    # 
+    # If it is taking too long to train, lower the number of epochs from 1000 to
+    # a satisfactory number (500, 200, 100). 
     def fit(self, data, target):
         lossesMSE = []
         lossesCE = []
         inputSize = len(data[0])
-        self.model = MLP(inputSize, inputSize//2, 4)
+        self.model = MLP(inputSize, self.HIDDEN_SIZE, 4) 
         predictions = []
         targets = []
         for i in range(len(target)):
@@ -46,20 +54,12 @@ class Classifier:
             self.model.backward(learningRate = self.LEARNING_RATE,  
                                 targets = target)
 
-            lossMSE = self.model.meanSqLoss(predictions, targets)
-            lossesMSE.append(lossMSE)
             lossCE = self.model.crossEntropyLossBatch(predictions, targets, 0.001)
             lossesCE.append(lossCE)
             if epoch % 50 == 0:
-                print(f"lossCE: {lossCE}, lossMSE: {lossMSE}")
+                print(f"Training Epoch: {epoch}/1000, Cross Entropy Loss: {lossCE:.4f}")
             predictions = []
         
-        # Loss graph plots
-        fig, (ax1, ax2) = plt.subplots(1, 2)
-        fig.suptitle('Loss')
-        ax1.plot(lossesMSE)
-        ax2.plot(lossesCE)
-        plt.show()
 
     # We simply output the integer output/prediction given a singular feature
     # array. Current legal moves are given as array of string 'North', 'East',
@@ -153,7 +153,6 @@ class MLP:
         for k, z_k in enumerate(z):
             z[k] = self.sumHiddenOnWeights(y, k)
         
-
         # Training mode batch handling (we have 125 samples)
         if train:
             self.batch.append((input, y, z))
@@ -171,10 +170,6 @@ class MLP:
         N = preds.shape[0]
         loss = -np.sum(targets * np.log(preds + 0.000000001)) / N
         return loss
-
-    # Mean Squared Loss function used for evaluating model.
-    def meanSqLoss(self, pred, target):
-        return np.sum(np.square(np.array(pred)-np.array(target))) / (2 * self.inputSize)
 
     # Function to parse any singular target into one hot encoding form
     def oneHotEncode(self, target):
@@ -214,18 +209,4 @@ class MLP:
 
         self.weightsKJ = self.weightsKJ - weightUpdateKJ
         self.weightsJI = self.weightsJI - weightUpdateJI
-
-
-            
-        
-
-
-            
-
-
-
-
-
-
-    
     
