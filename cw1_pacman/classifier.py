@@ -3,6 +3,7 @@
 #
 # Use the skeleton below for the classifier and insert your code here.
 import numpy as np
+import matplotlib.pyplot as plt 
 
 class Classifier:
     # Classifier is initialised with nothing passed through. Only initialise 
@@ -15,7 +16,7 @@ class Classifier:
     # feel free to change these two hyperparameters. 
     def __init__(self):
         self.LEARNING_RATE = 0.01
-        self.HIDDEN_SIZE = 10
+        self.HIDDEN_SIZE = 35
 
     # As far as I can see, we don't have to perform any retraining on the model
     # between sets of games, unless we know the environment changes (I believe
@@ -59,6 +60,9 @@ class Classifier:
             if epoch % 50 == 0:
                 print(f"Training Epoch: {epoch}/1000, Cross Entropy Loss: {lossCE:.4f}")
             predictions = []
+            
+        plt.plot(lossesCE)
+        plt.show()
         
 
     # We simply output the integer output/prediction given a singular feature
