@@ -7,3 +7,9 @@ The following command from within the cw1_pacman folder is to be made to use the
 
 <code>python pacman.py --pacman ClassifierAgent</code>
 
+
+## Coursework 2: Q-Learning Agent
+
+Use the following command to perform a <b>*single*</b> training episode, thanks to the limitations of using the _final()_ funciton to initialise the q-table.  
+
+<code>python pacman.py -p QLearnAgent -l smallGrid -x 2 -n 2</code>
