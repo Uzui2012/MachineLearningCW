@@ -26,7 +26,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import random
-
 from pacman import Directions, GameState
 from pacman_utils.game import Agent
 from pacman_utils import util
@@ -48,8 +47,37 @@ class GameStateFeatures:
         """
 
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        self.state = state
+        wall = state.getWalls()
+        self.width = wall.width
+        self.height = wall.height
+        
+    def getWalls(self):
+        return state.getWalls()
+    
+    # Just use this to get any state information. amazing redundancy.
+    def getState(self):
+        return self.state
 
+
+class QTable:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.num_actions = 4 # Not an argument as it is given we need to store 4 actions
+        self.table = [[[0 for a in range(self.num_actions)] for y in range(height)] for x in range(width)]
+        self.display()
+    def setVal(self, x, y, a, new_val):
+        self.table[int(x)][int(y)][int(a)] = new_val
+        
+    def getVal(self, x, y, a):
+        return self.table[int(x)][int(y)][int(a)]
+    
+    def display(self):       
+        for i in range(self.width):
+            for j in range(self.height):
+                print(f"{self.getVal(i, j, 2)}", end='') #only displays grid with a single value, there are 4 actions per grid slot
+            print()
 
 class QLearnAgent(Agent):
 
@@ -81,6 +109,9 @@ class QLearnAgent(Agent):
         self.numTraining = int(numTraining)
         # Count the number of games we have played
         self.episodesSoFar = 0
+        
+
+        
 
     # Accessor functions for the variable episodesSoFar controlling learning
     def incrementEpisodesSoFar(self):
@@ -170,6 +201,7 @@ class QLearnAgent(Agent):
             reward: the reward received on this trajectory
         """
         "*** YOUR CODE HERE ***"
+        print("LEARN")
         util.raiseNotDefined()
 
     # WARNING: You will be tested on the functionality of this method
@@ -240,19 +272,16 @@ class QLearnAgent(Agent):
         Returns:
             The action to take
         """
+        
+        
+        
         # The data we have about the state of the game
         legal = state.getLegalPacmanActions()
         if Directions.STOP in legal:
             legal.remove(Directions.STOP)
 
-        # logging to help you understand the inputs, feel free to remove
-        print("Legal moves: ", legal)
-        print("Pacman position: ", state.getPacmanPosition())
-        print("Ghost positions:", state.getGhostPositions())
-        print("Food locations: ")
-        print(state.getFood())
-        print("Score: ", state.getScore())
-
+        
+        print("ACTION")
         stateFeatures = GameStateFeatures(state)
 
         # Now pick what action to take.
@@ -278,3 +307,14 @@ class QLearnAgent(Agent):
             print('%s\n%s' % (msg, '-' * len(msg)))
             self.setAlpha(0)
             self.setEpsilon(0)
+            
+        ### THIS IS OUR ONLY ENTRY POINT AND MUST KEEP TRACK OF LEARNING AND GAME STATE FROM HERE, 
+        ### WE CANNOT USE registerInitialState LIKE IN OTHER COURSEWORKS SO ONE EPISODE MUST 
+        ### BE DISMISSED TO SET UP THE Q-TABLE. GOD ONLY KNOWS WHY THEY DID THIS.
+
+        # First possibly entry point for initialisation as final bookends episodes - we dismiss the first training episode thanks to this.
+        if self.getEpisodesSoFar() ==  1: 
+            
+            stateFeatures = GameStateFeatures(state)
+            self.q_table = QTable(stateFeatures.width, stateFeatures.height)
+            
