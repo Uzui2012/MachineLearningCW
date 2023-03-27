@@ -331,7 +331,8 @@ class QLearnAgent(Agent):
             self.setAlpha(0)
             self.setEpsilon(0)
 
-        # s = GameStateFeatures(state)
-        # reward = self.computeReward(self.lastState, state)
-        # self.learn(s, self.lastAction, reward, s)
-        # self.updateCount(s, self.lastAction)
+        stateFeatures = GameStateFeatures(state)
+        s = GameStateFeatures(self.lastState)
+        reward = self.computeReward(self.lastState, state)
+        self.learn(s, self.lastAction, reward, stateFeatures)
+        self.updateCount(s, self.lastAction)
