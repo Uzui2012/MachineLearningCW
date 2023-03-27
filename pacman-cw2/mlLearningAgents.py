@@ -56,6 +56,8 @@ class GameStateFeatures:
         return state.getWalls()
     
     # Just use this to get any state information. amazing redundancy.
+    # Ill fully update this and any of you guys' code with the full spectrum of the
+    # GameState functions you end up using. For now, just use this as a bypass.
     def getState(self):
         return self.state
 
@@ -64,9 +66,10 @@ class QTable:
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self.num_actions = 4 # Not an argument as it is given we need to store 4 actions
+        self.num_actions = 4 # Not an argument as it is given; we need to store 4 actions
         self.table = [[[0 for a in range(self.num_actions)] for y in range(height)] for x in range(width)]
-        self.display()
+        #self.display()
+    
     def setVal(self, x, y, a, new_val):
         self.table[int(x)][int(y)][int(a)] = new_val
         
@@ -76,7 +79,8 @@ class QTable:
     def display(self):       
         for i in range(self.width):
             for j in range(self.height):
-                print(f"{self.getVal(i, j, 2)}", end='') #only displays grid with a single value, there are 4 actions per grid slot
+                #only displays grid with a single value, there are 4 actions per grid slot
+                print(f"{self.getVal(i, j, 2)}", end='') 
             print()
 
 class QLearnAgent(Agent):
