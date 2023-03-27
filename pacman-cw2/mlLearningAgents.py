@@ -26,6 +26,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import random
+import time
 from pacman import Directions, GameState
 from pacman_utils.game import Agent
 from pacman_utils import util
@@ -47,44 +48,14 @@ class GameStateFeatures:
         """
 
         "*** YOUR CODE HERE ***"
-        self.state = state
-        wall = state.getWalls()
-        self.width = wall.width
-        self.height = wall.height
+        self.legal_actions = state.getLegalActions()
+        self.state = self.concatState(state)
         
-    def getWalls(self):
-        return state.getWalls()
-    
-    # Just use this to get any state information. amazing redundancy. Ill fully 
-    # update this and any of you guys' code with the full spectrum of the 
-    # GameState functions you end up using. For now, just use this as a bypass.
-    def getState(self):
-        return self.state
-
-
-class QTable:
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
-        self.num_actions = 4 # Not an argument as it is given; we need to store 
-                             # 4 actions.
-        self.table = [[[0 for a in range(self.num_actions)] for y in range(height)] for x in range(width)]
-        #self.display()
-    
-    def setVal(self, x, y, a, new_val):
-        self.table[int(x)][int(y)][int(a)] = new_val
+    def concatState(self, state: GameState):
+        temp = state.deepCopy()
+        temp.data.score = 0
+        return temp
         
-    def getVal(self, x, y, a):
-        return self.table[int(x)][int(y)][int(a)]
-    
-    def display(self):       
-        for i in range(self.width):
-            for j in range(self.height):
-                # only displays grid with a single value, there are 4 actions per
-                # grid slot
-                print(f"{self.getVal(i, j, 2)}", end='') 
-            print()
-
 class QLearnAgent(Agent):
 
     def __init__(self,
@@ -111,11 +82,20 @@ class QLearnAgent(Agent):
         self.alpha = float(alpha)
         self.epsilon = float(epsilon)
         self.gamma = float(gamma)
+        #self.alpha = 0.1
+        #self.epsilon = 0.25
+        #self.gamma = 0.9
         self.maxAttempts = int(maxAttempts)
         self.numTraining = int(numTraining)
         # Count the number of games we have played
         self.episodesSoFar = 0
-        
+
+        self.q_value = util.Counter()
+        self.counts = util.Counter()
+
+        # Store previous states
+        self.lastState = None
+        self.lastAction = None
 
     # Accessor functions for the variable episodesSoFar controlling learning
     def incrementEpisodesSoFar(self):
@@ -173,7 +153,7 @@ class QLearnAgent(Agent):
             Q(state, action)
         """
         "*** YOUR CODE HERE ***"
-        return state.q_value[(state, action)]
+        return self.q_value[(state.state, action)]
 
     # WARNING: You will be tested on the functionality of this method
     # DO NOT change the function signature
@@ -213,10 +193,13 @@ class QLearnAgent(Agent):
             reward: the reward received on this trajectory
         """
         "*** YOUR CODE HERE ***"
+        #print("learn")
+        #time.sleep(5)
         current_qvalue = self.getQValue(state, action)
         max_qvalue = self.maxQValue(nextState)
         estimate = reward + self.gamma * max_qvalue - current_qvalue
-        state.q_value[(state, action)] = current_qvalue + self.alpha * estimate
+        self.q_value[(state.state, action)] = current_qvalue + self.alpha * estimate
+
 
     # WARNING: You will be tested on the functionality of this method
     # DO NOT change the function signature
@@ -231,7 +214,7 @@ class QLearnAgent(Agent):
             action: Action taken
         """
         "*** YOUR CODE HERE ***"
-        state.counts[(state, action)] += 1
+        self.counts[(state.state, action)] += 1
 
     # WARNING: You will be tested on the functionality of this method
     # DO NOT change the function signature
@@ -247,7 +230,7 @@ class QLearnAgent(Agent):
             Number of times that the action has been taken in a given state
         """
         "*** YOUR CODE HERE ***"
-        return state.counts[(state, action)]
+        return self.counts[(state.state, action)]
 
     # WARNING: You will be tested on the functionality of this method
     # DO NOT change the function signature
@@ -268,7 +251,11 @@ class QLearnAgent(Agent):
             The exploration value
         """
         "*** YOUR CODE HERE ***"
-        return utility + self.epsilon * (1 / (counts + 1))
+
+        if counts < self.maxAttempts:
+            return 1000.0
+        else:
+            return utility
 
     # WARNING: You will be tested on the functionality of this method
     # DO NOT change the function signature
@@ -286,18 +273,20 @@ class QLearnAgent(Agent):
         Returns:
             The action to take
         """
+        #print("getAction")
+        #time.sleep(5)
         # The data we have about the state of the game
         legal = state.getLegalPacmanActions()
         if Directions.STOP in legal:
             legal.remove(Directions.STOP)
 
         # logging to help you understand the inputs, feel free to remove
-        print("Legal moves: ", legal)
-        print("Pacman position: ", state.getPacmanPosition())
-        print("Ghost positions:", state.getGhostPositions())
-        print("Food locations: ")
-        print(state.getFood())
-        print("Score: ", state.getScore())
+        # print("Legal moves: ", legal)
+        # print("Pacman position: ", state.getPacmanPosition())
+        # print("Ghost positions:", state.getGhostPositions())
+        # print("Food locations: ")
+        # print(state.getFood())
+        # print("Score: ", state.getScore())
 
         stateFeatures = GameStateFeatures(state)
 
@@ -308,33 +297,20 @@ class QLearnAgent(Agent):
         # if util.flipCoin(self.epsilon):
         #     action = random.choice(legal)
 
-        # for action in legal:
-        #     q = self.getQValue(stateFeatures, action)
-        #     max_q = self.maxQValue(stateFeatures)
-        #
-        #     reward = self.computeReward(state, state)
-        #     self.learn(stateFeatures, action, reward, stateFeatures)
-        #     self.updateCount(stateFeatures, action)
-
-        # qValues = [self.getQValue(stateFeatures, action) for action in legal]
-        # maxQValue = self.maxQValue(stateFeatures)
-        # maxActions = [action for action in legal if self.getQValue(stateFeatures, action) == maxQValue]
-        # action = random.choice(maxActions)
+        # Update the Q-value for the previous state-action pair and the current state
+        if self.lastState is not None and self.lastAction is not None:
+            s = GameStateFeatures(self.lastState)
+            reward = self.computeReward(self.lastState, state)
+            self.learn(s, self.lastAction, reward, stateFeatures)
+            self.updateCount(s, self.lastAction)
 
         utility = [self.explorationFn(self.getQValue(stateFeatures, action), self.getCount(stateFeatures, action)) for action in legal]
         action = legal[utility.index(max(utility))]
 
-        # Update the Q-value for the previous state-action pair and the current state
-        if self.lastState is not None and self.lastAction is not None:
-            reward = self.computeReward(self.lastState, state)
-            self.learn(self.lastState, self.lastAction, reward, stateFeatures)
-            self.updateCount(stateFeatures, action)
-
-        self.lastState = stateFeatures
+        self.lastState = state
         self.lastAction = action
 
         return action
-
 
     def final(self, state: GameState):
         """
@@ -344,6 +320,7 @@ class QLearnAgent(Agent):
         Args:
             state: the final game state
         """
+        
         print(f"Game {self.getEpisodesSoFar()} just ended!")
 
         # Keep track of the number of games played, and set learning
@@ -355,16 +332,9 @@ class QLearnAgent(Agent):
             print('%s\n%s' % (msg, '-' * len(msg)))
             self.setAlpha(0)
             self.setEpsilon(0)
-            
-        ### THIS IS OUR ONLY ENTRY POINT AND MUST KEEP TRACK OF LEARNING AND 
-        ### GAME STATE FROM HERE, WE CANNOT USE registerInitialState LIKE IN 
-        ### OTHER COURSEWORKS SO ONE EPISODE MUST BE DISMISSED TO SET UP THE 
-        ### Q-TABLE. GOD ONLY KNOWS WHY THEY DID THIS.
 
-        # First possibly entry point for initialisation as final bookends 
-        # episodes - we dismiss the first training episode thanks to this.
-        if self.getEpisodesSoFar() ==  1: 
-            
-            stateFeatures = GameStateFeatures(state)
-            self.q_table = QTable(stateFeatures.width, stateFeatures.height)
-            
+        stateFeatures = GameStateFeatures(state)
+        s = GameStateFeatures(self.lastState)
+        reward = self.computeReward(self.lastState, state)
+        self.learn(s, self.lastAction, reward, stateFeatures)
+        self.updateCount(s, self.lastAction)
