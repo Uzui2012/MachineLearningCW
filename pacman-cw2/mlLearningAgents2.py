@@ -48,9 +48,8 @@ class GameStateFeatures:
         """
 
         "*** YOUR CODE HERE ***"
-        self.q_value = util.Counter()
-        self.counts = util.Counter()
         self.legal_actions = state.getLegalActions()
+        self.state = state
 
 
 class QLearnAgent(Agent):
@@ -83,6 +82,9 @@ class QLearnAgent(Agent):
         self.numTraining = int(numTraining)
         # Count the number of games we have played
         self.episodesSoFar = 0
+
+        self.q_value = util.Counter()
+        self.counts = util.Counter()
 
         # Store previous states
         self.lastState = None
@@ -144,7 +146,7 @@ class QLearnAgent(Agent):
             Q(state, action)
         """
         "*** YOUR CODE HERE ***"
-        return state.q_value[(state, action)]
+        return self.q_value[(state.state, action)]
 
     # WARNING: You will be tested on the functionality of this method
     # DO NOT change the function signature
@@ -187,7 +189,7 @@ class QLearnAgent(Agent):
         current_qvalue = self.getQValue(state, action)
         max_qvalue = self.maxQValue(nextState)
         estimate = reward + self.gamma * max_qvalue - current_qvalue
-        state.q_value[(state, action)] = current_qvalue + self.alpha * estimate
+        self.q_value[(state.state, action)] = current_qvalue + self.alpha * estimate
 
     # WARNING: You will be tested on the functionality of this method
     # DO NOT change the function signature
@@ -202,7 +204,7 @@ class QLearnAgent(Agent):
             action: Action taken
         """
         "*** YOUR CODE HERE ***"
-        state.counts[(state, action)] += 1
+        self.counts[(state.state, action)] += 1
 
     # WARNING: You will be tested on the functionality of this method
     # DO NOT change the function signature
@@ -218,7 +220,7 @@ class QLearnAgent(Agent):
             Number of times that the action has been taken in a given state
         """
         "*** YOUR CODE HERE ***"
-        return state.counts[(state, action)]
+        return self.counts[(state.state, action)]
 
     # WARNING: You will be tested on the functionality of this method
     # DO NOT change the function signature
@@ -267,12 +269,12 @@ class QLearnAgent(Agent):
             legal.remove(Directions.STOP)
 
         # logging to help you understand the inputs, feel free to remove
-        print("Legal moves: ", legal)
-        print("Pacman position: ", state.getPacmanPosition())
-        print("Ghost positions:", state.getGhostPositions())
-        print("Food locations: ")
-        print(state.getFood())
-        print("Score: ", state.getScore())
+        # print("Legal moves: ", legal)
+        # print("Pacman position: ", state.getPacmanPosition())
+        # print("Ghost positions:", state.getGhostPositions())
+        # print("Food locations: ")
+        # print(state.getFood())
+        # print("Score: ", state.getScore())
 
         stateFeatures = GameStateFeatures(state)
 
@@ -282,19 +284,6 @@ class QLearnAgent(Agent):
         # With probability `epsilon`, take a random action
         # if util.flipCoin(self.epsilon):
         #     action = random.choice(legal)
-
-        # for action in legal:
-        #     q = self.getQValue(stateFeatures, action)
-        #     max_q = self.maxQValue(stateFeatures)
-        #
-        #     reward = self.computeReward(state, state)
-        #     self.learn(stateFeatures, action, reward, stateFeatures)
-        #     self.updateCount(stateFeatures, action)
-
-        # qValues = [self.getQValue(stateFeatures, action) for action in legal]
-        # maxQValue = self.maxQValue(stateFeatures)
-        # maxActions = [action for action in legal if self.getQValue(stateFeatures, action) == maxQValue]
-        # action = random.choice(maxActions)
 
         # Update the Q-value for the previous state-action pair and the current state
         if self.lastState is not None and self.lastAction is not None:
