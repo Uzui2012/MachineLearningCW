@@ -26,6 +26,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import random
+
 from pacman import Directions, GameState
 from pacman_utils.game import Agent
 from pacman_utils import util
@@ -47,43 +48,10 @@ class GameStateFeatures:
         """
 
         "*** YOUR CODE HERE ***"
-        self.state = state
-        wall = state.getWalls()
-        self.width = wall.width
-        self.height = wall.height
-        
-    def getWalls(self):
-        return state.getWalls()
-    
-    # Just use this to get any state information. amazing redundancy. Ill fully 
-    # update this and any of you guys' code with the full spectrum of the 
-    # GameState functions you end up using. For now, just use this as a bypass.
-    def getState(self):
-        return self.state
+        self.q_value = util.Counter()
+        self.counts = util.Counter()
+        self.legal_actions = state.getLegalActions()
 
-
-class QTable:
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
-        self.num_actions = 4 # Not an argument as it is given; we need to store 
-                             # 4 actions.
-        self.table = [[[0 for a in range(self.num_actions)] for y in range(height)] for x in range(width)]
-        #self.display()
-    
-    def setVal(self, x, y, a, new_val):
-        self.table[int(x)][int(y)][int(a)] = new_val
-        
-    def getVal(self, x, y, a):
-        return self.table[int(x)][int(y)][int(a)]
-    
-    def display(self):       
-        for i in range(self.width):
-            for j in range(self.height):
-                # only displays grid with a single value, there are 4 actions per
-                # grid slot
-                print(f"{self.getVal(i, j, 2)}", end='') 
-            print()
 
 class QLearnAgent(Agent):
 
@@ -115,7 +83,10 @@ class QLearnAgent(Agent):
         self.numTraining = int(numTraining)
         # Count the number of games we have played
         self.episodesSoFar = 0
-        
+
+        # Store previous states
+        self.lastState = None
+        self.lastAction = None
 
     # Accessor functions for the variable episodesSoFar controlling learning
     def incrementEpisodesSoFar(self):
@@ -268,7 +239,11 @@ class QLearnAgent(Agent):
             The exploration value
         """
         "*** YOUR CODE HERE ***"
-        return utility + self.epsilon * (1 / (counts + 1))
+
+        if counts < self.maxAttempts:
+            return 1000.0
+        else:
+            return utility
 
     # WARNING: You will be tested on the functionality of this method
     # DO NOT change the function signature
@@ -321,20 +296,20 @@ class QLearnAgent(Agent):
         # maxActions = [action for action in legal if self.getQValue(stateFeatures, action) == maxQValue]
         # action = random.choice(maxActions)
 
+        # Update the Q-value for the previous state-action pair and the current state
+        if self.lastState is not None and self.lastAction is not None:
+            s = GameStateFeatures(self.lastState)
+            reward = self.computeReward(self.lastState, state)
+            self.learn(s, self.lastAction, reward, stateFeatures)
+            self.updateCount(s, self.lastAction)
+
         utility = [self.explorationFn(self.getQValue(stateFeatures, action), self.getCount(stateFeatures, action)) for action in legal]
         action = legal[utility.index(max(utility))]
 
-        # Update the Q-value for the previous state-action pair and the current state
-        if self.lastState is not None and self.lastAction is not None:
-            reward = self.computeReward(self.lastState, state)
-            self.learn(self.lastState, self.lastAction, reward, stateFeatures)
-            self.updateCount(stateFeatures, action)
-
-        self.lastState = stateFeatures
+        self.lastState = state
         self.lastAction = action
 
         return action
-
 
     def final(self, state: GameState):
         """
@@ -355,16 +330,8 @@ class QLearnAgent(Agent):
             print('%s\n%s' % (msg, '-' * len(msg)))
             self.setAlpha(0)
             self.setEpsilon(0)
-            
-        ### THIS IS OUR ONLY ENTRY POINT AND MUST KEEP TRACK OF LEARNING AND 
-        ### GAME STATE FROM HERE, WE CANNOT USE registerInitialState LIKE IN 
-        ### OTHER COURSEWORKS SO ONE EPISODE MUST BE DISMISSED TO SET UP THE 
-        ### Q-TABLE. GOD ONLY KNOWS WHY THEY DID THIS.
 
-        # First possibly entry point for initialisation as final bookends 
-        # episodes - we dismiss the first training episode thanks to this.
-        if self.getEpisodesSoFar() ==  1: 
-            
-            stateFeatures = GameStateFeatures(state)
-            self.q_table = QTable(stateFeatures.width, stateFeatures.height)
-            
+        # s = GameStateFeatures(state)
+        # reward = self.computeReward(self.lastState, state)
+        # self.learn(s, self.lastAction, reward, s)
+        # self.updateCount(s, self.lastAction)
